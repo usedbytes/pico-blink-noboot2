@@ -2,21 +2,39 @@ cmake_minimum_required(VERSION 3.13)
 
 include(pico_sdk_import.cmake)
 
-project(test_project C CXX ASM)
+project(blink_combined C CXX ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-#set(PICO_BARE_METAL 1)
-
 pico_sdk_init()
 
-add_executable(blink_noboot2 blink.c)
+# The build process is roughly:
+# 1. Build a combined bootloader + app ELF         (NAME_combined_nohdr.elf)
+# 2. Extract the app binary from that ELF          (NAME_app.bin)
+# 3. Calculate the checksum of the app binary      (NAME_hdr.bin)
+# 4. Update the header section in the ELF from 1.  (NAME_combined.elf)
 
-pico_add_extra_outputs(blink_noboot2)
+# The combined uf2 file doesn't work, something must get confused by the
+# combined package. So, disable uf2 for now, instead you can load either the
+# ${NAME}_combined.bin or ${NAME}_combined.elf with picotool
+set(PICO_NO_UF2 1)
 
-set_target_properties(blink_noboot2 PROPERTIES COMPILE_FLAGS "-Wall")
+set(NAME blink)
 
-pico_set_linker_script(blink_noboot2 ${CMAKE_CURRENT_SOURCE_DIR}/blink_noboot2.ld)
+add_executable(${NAME}
+	"blink.c"
+)
 
-target_link_libraries(blink_noboot2 pico_stdlib_headers pico_stdlib hardware_watchdog hardware_structs)
+target_link_libraries(${NAME}
+	pico_stdlib_headers
+	pico_stdlib
+	hardware_watchdog
+	hardware_structs
+)
+
+set_target_properties(${NAME}	PROPERTIES COMPILE_FLAGS "-Wall")
+
+add_subdirectory(bootloader)
+
+bootloader_build_combined(${NAME})
