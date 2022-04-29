@@ -1,0 +1,3 @@
+[submodule "bootloader"]
+	path = bootloader
+	url = ../rp2040-serial-bootloader.git
